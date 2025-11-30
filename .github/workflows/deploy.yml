@@ -1,0 +1,140 @@
+name: Deploy AI Photo Search Application
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  LAMBDA_INDEX_FUNCTION: ai-photo-search-index-photos
+  LAMBDA_SEARCH_FUNCTION: ai-photo-search-search-photos
+  FRONTEND_BUCKET: ai-photo-search-frontend-381437599887
+
+jobs:
+  deploy-lambda:
+    name: Deploy Lambda Functions
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Lambda dependencies (index-photos)
+        run: |
+          cd lambda/index-photos
+          pip install -r requirements.txt -t ./package
+          cp lambda_function.py package/
+          cd package
+          zip -r ../index-photos.zip .
+        
+      - name: Deploy index-photos Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ env.LAMBDA_INDEX_FUNCTION }} \
+            --zip-file fileb://lambda/index-photos/index-photos.zip \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Install Lambda dependencies (search-photos)
+        run: |
+          cd lambda/search-photos
+          pip install -r requirements.txt -t ./package
+          cp lambda_function.py package/
+          cd package
+          zip -r ../search-photos.zip .
+
+      - name: Deploy search-photos Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ env.LAMBDA_SEARCH_FUNCTION }} \
+            --zip-file fileb://lambda/search-photos/search-photos.zip \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for Lambda updates
+        run: |
+          echo "Waiting for Lambda functions to be ready..."
+          sleep 10
+
+  deploy-frontend:
+    name: Deploy Frontend to S3
+    runs-on: ubuntu-latest
+    needs: deploy-lambda
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy frontend to S3
+        run: |
+          aws s3 cp frontend/index-configured.html \
+            s3://${{ env.FRONTEND_BUCKET }}/index.html \
+            --content-type "text/html" \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Invalidate CloudFront (if applicable)
+        run: |
+          echo "Frontend deployed successfully!"
+
+  test-deployment:
+    name: Test Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-lambda, deploy-frontend]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify Lambda Functions
+        run: |
+          echo "Checking index-photos function..."
+          aws lambda get-function --function-name ${{ env.LAMBDA_INDEX_FUNCTION }} --region ${{ env.AWS_REGION }}
+          
+          echo "Checking search-photos function..."
+          aws lambda get-function --function-name ${{ env.LAMBDA_SEARCH_FUNCTION }} --region ${{ env.AWS_REGION }}
+
+      - name: Verify Frontend
+        run: |
+          echo "Checking frontend deployment..."
+          aws s3 ls s3://${{ env.FRONTEND_BUCKET }}/index.html --region ${{ env.AWS_REGION }}
+
+      - name: Deployment Summary
+        run: |
+          echo "✅ Lambda functions deployed successfully"
+          echo "✅ Frontend deployed successfully"
+          echo "🌐 Frontend URL: http://${{ env.FRONTEND_BUCKET }}.s3-website-${{ env.AWS_REGION }}.amazonaws.com"
