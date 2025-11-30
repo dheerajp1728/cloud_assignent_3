@@ -1,0 +1,277 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CodePipeline for Lambda Functions Deployment'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'ai-photo-search'
+    Description: 'Project name for resource naming'
+  
+  GitHubOwner:
+    Type: String
+    Description: 'GitHub repository owner'
+    Default: 'your-github-username'
+  
+  GitHubRepo:
+    Type: String
+    Description: 'GitHub repository name'
+    Default: 'ai-photo-search'
+  
+  GitHubBranch:
+    Type: String
+    Description: 'GitHub branch to track'
+    Default: 'main'
+  
+  GitHubToken:
+    Type: String
+    Description: 'GitHub personal access token'
+    NoEcho: true
+    Default: 'your-github-token'
+
+Resources:
+  # S3 Bucket for Pipeline Artifacts
+  ArtifactStoreBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-pipeline-artifacts-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldArtifacts
+            Status: Enabled
+            ExpirationInDays: 30
+    DeletionPolicy: Retain
+
+  # IAM Role for CodePipeline
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-codepipeline-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AWSCodePipelineFullAccess'
+      Policies:
+        - PolicyName: CodePipelineServicePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:PutObject'
+                  - 's3:GetBucketLocation'
+                  - 's3:ListBucket'
+                Resource:
+                  - !GetAtt ArtifactStoreBucket.Arn
+                  - !Sub '${ArtifactStoreBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - 'codebuild:BatchGetBuilds'
+                  - 'codebuild:StartBuild'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'cloudformation:*'
+                  - 'iam:PassRole'
+                Resource: '*'
+
+  # IAM Role for CodeBuild
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-codebuild-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: CodeBuildServicePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:PutObject'
+                Resource:
+                  - !GetAtt ArtifactStoreBucket.Arn
+                  - !Sub '${ArtifactStoreBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - 'lambda:UpdateFunctionCode'
+                  - 'lambda:GetFunction'
+                  - 'lambda:PublishVersion'
+                  - 'lambda:UpdateFunctionConfiguration'
+                Resource:
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ProjectName}-index-photos'
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ProjectName}-search-photos'
+
+  # CodeBuild Project for Index Photos Lambda
+  IndexPhotosCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub '${ProjectName}-index-photos-build'
+      Description: 'Build and deploy Index Photos Lambda function'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        EnvironmentVariables:
+          - Name: FUNCTION_NAME
+            Value: !Sub '${ProjectName}-index-photos'
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: lambda/index-photos/buildspec.yml
+      TimeoutInMinutes: 15
+
+  # CodeBuild Project for Search Photos Lambda
+  SearchPhotosCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub '${ProjectName}-search-photos-build'
+      Description: 'Build and deploy Search Photos Lambda function'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        EnvironmentVariables:
+          - Name: FUNCTION_NAME
+            Value: !Sub '${ProjectName}-search-photos'
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: lambda/search-photos/buildspec.yml
+      TimeoutInMinutes: 15
+
+  # CodePipeline for Lambda Functions (P1)
+  LambdaPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub '${ProjectName}-lambda-pipeline'
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactStoreBucket
+      Stages:
+        # Source Stage
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: '1'
+              Configuration:
+                Owner: !Ref GitHubOwner
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBranch
+                OAuthToken: !Ref GitHubToken
+                PollForSourceChanges: false
+              OutputArtifacts:
+                - Name: SourceOutput
+        
+        # Build Stage - Index Photos Lambda
+        - Name: Build-IndexPhotos
+          Actions:
+            - Name: BuildIndexPhotosLambda
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref IndexPhotosCodeBuildProject
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: IndexPhotosOutput
+              RunOrder: 1
+        
+        # Build Stage - Search Photos Lambda
+        - Name: Build-SearchPhotos
+          Actions:
+            - Name: BuildSearchPhotosLambda
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref SearchPhotosCodeBuildProject
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: SearchPhotosOutput
+              RunOrder: 1
+
+  # GitHub Webhook for automatic pipeline triggering
+  GitHubWebhook:
+    Type: AWS::CodePipeline::Webhook
+    Properties:
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubToken
+      Filters:
+        - JsonPath: "$.ref"
+          MatchEquals: !Sub 'refs/heads/${GitHubBranch}'
+      TargetPipeline: !Ref LambdaPipeline
+      TargetAction: SourceAction
+      TargetPipelineVersion: !GetAtt LambdaPipeline.Version
+      RegisterWithThirdParty: true
+
+Outputs:
+  PipelineName:
+    Description: 'Lambda Pipeline Name'
+    Value: !Ref LambdaPipeline
+    Export:
+      Name: !Sub '${ProjectName}-lambda-pipeline-name'
+
+  PipelineUrl:
+    Description: 'Lambda Pipeline Console URL'
+    Value: !Sub 'https://console.aws.amazon.com/codesuite/codepipeline/pipelines/${LambdaPipeline}/view'
+
+  ArtifactBucket:
+    Description: 'S3 Bucket for Pipeline Artifacts'
+    Value: !Ref ArtifactStoreBucket
+    Export:
+      Name: !Sub '${ProjectName}-pipeline-artifacts-bucket'
+
+  IndexPhotosCodeBuildProject:
+    Description: 'CodeBuild Project for Index Photos Lambda'
+    Value: !Ref IndexPhotosCodeBuildProject
+
+  SearchPhotosCodeBuildProject:
+    Description: 'CodeBuild Project for Search Photos Lambda'
+    Value: !Ref SearchPhotosCodeBuildProject

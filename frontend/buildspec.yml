@@ -1,0 +1,44 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "Installing dependencies..."
+      - cd frontend
+      
+  build:
+    commands:
+      - echo "Preparing frontend files for deployment..."
+      - echo "Current directory:" && pwd
+      - echo "Files to deploy:" && ls -la
+      - echo "Validating HTML..."
+      - |
+        if [ -f "index.html" ]; then
+          echo "✓ index.html found"
+        else
+          echo "✗ index.html not found"
+          exit 1
+        fi
+      - echo "Build completed on $(date)"
+      
+  post_build:
+    commands:
+      - echo "Deploying to S3..."
+      - |
+        if [ -z "$FRONTEND_BUCKET" ]; then
+          FRONTEND_BUCKET="ai-photo-search-frontend-${AWS_ACCOUNT_ID}"
+        fi
+      - echo "Target bucket: $FRONTEND_BUCKET"
+      - echo "Syncing files to S3..."
+      - aws s3 sync . s3://${FRONTEND_BUCKET}/ --delete --exclude "buildspec.yml" --exclude ".git/*" --region $AWS_DEFAULT_REGION
+      - echo "Setting content types..."
+      - aws s3 cp s3://${FRONTEND_BUCKET}/index.html s3://${FRONTEND_BUCKET}/index.html --content-type "text/html" --metadata-directive REPLACE --region $AWS_DEFAULT_REGION
+      - echo "Deployment completed successfully"
+      - echo "Website URL: http://${FRONTEND_BUCKET}.s3-website-${AWS_DEFAULT_REGION}.amazonaws.com"
+
+artifacts:
+  files:
+    - frontend/**/*
+  exclude-paths:
+    - frontend/buildspec.yml
+  name: FrontendArtifact

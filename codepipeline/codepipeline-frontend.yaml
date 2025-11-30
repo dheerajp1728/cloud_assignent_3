@@ -1,0 +1,228 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CodePipeline for Frontend Deployment'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'ai-photo-search'
+    Description: 'Project name for resource naming'
+  
+  FrontendBucketName:
+    Type: String
+    Description: 'Name of the S3 bucket hosting the frontend'
+  
+  GitHubOwner:
+    Type: String
+    Description: 'GitHub repository owner'
+    Default: 'your-github-username'
+  
+  GitHubRepo:
+    Type: String
+    Description: 'GitHub repository name'
+    Default: 'ai-photo-search'
+  
+  GitHubBranch:
+    Type: String
+    Description: 'GitHub branch to track'
+    Default: 'main'
+  
+  GitHubToken:
+    Type: String
+    Description: 'GitHub personal access token'
+    NoEcho: true
+    Default: 'your-github-token'
+
+Resources:
+  # S3 Bucket for Pipeline Artifacts
+  FrontendArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-frontend-artifacts-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldArtifacts
+            Status: Enabled
+            ExpirationInDays: 30
+    DeletionPolicy: Retain
+
+  # IAM Role for CodePipeline
+  FrontendPipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-frontend-pipeline-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: FrontendPipelinePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:PutObject'
+                  - 's3:GetBucketLocation'
+                  - 's3:ListBucket'
+                Resource:
+                  - !GetAtt FrontendArtifactBucket.Arn
+                  - !Sub '${FrontendArtifactBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - 'codebuild:BatchGetBuilds'
+                  - 'codebuild:StartBuild'
+                Resource: '*'
+
+  # IAM Role for CodeBuild
+  FrontendCodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-frontend-codebuild-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: FrontendCodeBuildPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:PutObject'
+                Resource:
+                  - !GetAtt FrontendArtifactBucket.Arn
+                  - !Sub '${FrontendArtifactBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:PutObjectAcl'
+                  - 's3:DeleteObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${FrontendBucketName}'
+                  - !Sub 'arn:aws:s3:::${FrontendBucketName}/*'
+
+  # CodeBuild Project for Frontend
+  FrontendCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub '${ProjectName}-frontend-build'
+      Description: 'Build and deploy frontend to S3'
+      ServiceRole: !GetAtt FrontendCodeBuildRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        EnvironmentVariables:
+          - Name: FRONTEND_BUCKET
+            Value: !Ref FrontendBucketName
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: frontend/buildspec.yml
+      TimeoutInMinutes: 10
+
+  # CodePipeline for Frontend (P2)
+  FrontendPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub '${ProjectName}-frontend-pipeline'
+      RoleArn: !GetAtt FrontendPipelineRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref FrontendArtifactBucket
+      Stages:
+        # Source Stage
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: '1'
+              Configuration:
+                Owner: !Ref GitHubOwner
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBranch
+                OAuthToken: !Ref GitHubToken
+                PollForSourceChanges: false
+              OutputArtifacts:
+                - Name: SourceOutput
+        
+        # Build Stage
+        - Name: Build
+          Actions:
+            - Name: BuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref FrontendCodeBuildProject
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+
+  # GitHub Webhook for automatic pipeline triggering
+  FrontendGitHubWebhook:
+    Type: AWS::CodePipeline::Webhook
+    Properties:
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubToken
+      Filters:
+        - JsonPath: "$.ref"
+          MatchEquals: !Sub 'refs/heads/${GitHubBranch}'
+      TargetPipeline: !Ref FrontendPipeline
+      TargetAction: SourceAction
+      TargetPipelineVersion: !GetAtt FrontendPipeline.Version
+      RegisterWithThirdParty: true
+
+Outputs:
+  PipelineName:
+    Description: 'Frontend Pipeline Name'
+    Value: !Ref FrontendPipeline
+    Export:
+      Name: !Sub '${ProjectName}-frontend-pipeline-name'
+
+  PipelineUrl:
+    Description: 'Frontend Pipeline Console URL'
+    Value: !Sub 'https://console.aws.amazon.com/codesuite/codepipeline/pipelines/${FrontendPipeline}/view'
+
+  ArtifactBucket:
+    Description: 'S3 Bucket for Frontend Pipeline Artifacts'
+    Value: !Ref FrontendArtifactBucket
+    Export:
+      Name: !Sub '${ProjectName}-frontend-artifacts-bucket'
+
+  CodeBuildProject:
+    Description: 'CodeBuild Project for Frontend'
+    Value: !Ref FrontendCodeBuildProject
