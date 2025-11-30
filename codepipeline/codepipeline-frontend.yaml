@@ -14,12 +14,12 @@ Parameters:
   GitHubOwner:
     Type: String
     Description: 'GitHub repository owner'
-    Default: 'your-github-username'
+    Default: 'dheerajp1728'
   
   GitHubRepo:
     Type: String
     Description: 'GitHub repository name'
-    Default: 'ai-photo-search'
+    Default: 'cloud_assignent_3'
   
   GitHubBranch:
     Type: String
