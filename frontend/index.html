@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Photo Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            flex: 1;
+            padding: 0.875rem 1.25rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #667eea;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            padding: 0.875rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .custom-labels {
+            margin-top: 1rem;
+        }
+
+        .custom-labels label {
+            display: block;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .custom-labels input {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .custom-labels small {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.875rem;
+        }
+
+        .message {
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            animation: slideIn 0.3s ease;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: rgba(72, 187, 120, 0.2);
+            border: 1px solid rgba(72, 187, 120, 0.4);
+            color: #48bb78;
+        }
+
+        .message.error {
+            background: rgba(245, 101, 101, 0.2);
+            border: 1px solid rgba(245, 101, 101, 0.4);
+            color: #f56565;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .results {
+            margin-top: 2rem;
+        }
+
+        .results h3 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .image-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .image-card p {
+            padding: 1rem;
+            margin: 0;
+            font-size: 0.875rem;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .footer p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📷 AI Photo Search</h1>
+        <p class="subtitle">Search your photos using natural language powered by AWS Lex & Rekognition</p>
+
+        <div id="message" class="message"></div>
+
+        <!-- Search Section -->
+        <div class="section">
+            <h2>🔍 Search Photos</h2>
+            <div class="input-group">
+                <input type="text" id="searchQuery" placeholder="Try: 'Show me dogs' or 'Find cats'" />
+                <button id="searchBtn" onclick="searchPhotos()">Search</button>
+            </div>
+            <div id="searchResults" class="results"></div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="section">
+            <h2>📤 Upload Photo</h2>
+            <div class="input-group">
+                <input type="file" id="photoFile" accept="image/*" />
+                <button id="uploadBtn" onclick="uploadPhoto()">Upload</button>
+            </div>
+            <div class="custom-labels">
+                <label for="customLabels">Custom Labels (optional)</label>
+                <input type="text" id="customLabels" placeholder="e.g., vacation, birthday, family" />
+                <small>Separate multiple labels with commas</small>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Powered by AWS Lambda, Lex, Rekognition, OpenSearch & API Gateway</p>
+        </div>
+    </div>
+
+    <script>
+        const API_GATEWAY_URL = 'https://ur2wyo21r1.execute-api.us-east-1.amazonaws.com/prod';
+        const API_KEY = 'EFFxLhQZQC5PmtAZww5953OrhluY72A2bNZAVFG4';
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type} show`;
+            setTimeout(() => {
+                messageEl.className = 'message';
+            }, 5000);
+        }
+
+        async function searchPhotos() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const searchBtn = document.getElementById('searchBtn');
+            const resultsEl = document.getElementById('searchResults');
+
+            if (!query) {
+                showMessage('Please enter a search query', 'error');
+                return;
+            }
+
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<span class="spinner"></span>Searching...';
+            resultsEl.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_GATEWAY_URL}/search?q=${encodeURIComponent(query)}`, {
+                    method: 'GET',
+                    headers: {
+                        'x-api-key': API_KEY
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.results && data.results.length > 0) {
+                    showMessage(`Found ${data.results.length} photos`, 'success');
+                    
+                    resultsEl.innerHTML = `
+                        <h3>Search Results (${data.results.length})</h3>
+                        <div class="image-grid">
+                            ${data.results.map((url, index) => `
+                                <div class="image-card">
+                                    <img src="${url}" alt="Result ${index + 1}" />
+                                    <p>${url.split('/').pop()}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    showMessage('No photos found', 'error');
+                    resultsEl.innerHTML = '';
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showMessage(`Search failed: ${error.message}`, 'error');
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Search';
+            }
+        }
+
+        async function uploadPhoto() {
+            const fileInput = document.getElementById('photoFile');
+            const customLabelsInput = document.getElementById('customLabels');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (!fileInput.files || !fileInput.files[0]) {
+                showMessage('Please select a file to upload', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            
+            if (!file.type.startsWith('image/')) {
+                showMessage('Please select an image file', 'error');
+                return;
+            }
+
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span class="spinner"></span>Uploading...';
+
+            try {
+                // Read file as ArrayBuffer to preserve binary data
+                const arrayBuffer = await file.arrayBuffer();
+
+                const headers = {
+                    'x-api-key': API_KEY,
+                    'Content-Type': file.type || 'image/jpeg'
+                };
+
+                const customLabels = customLabelsInput.value.trim();
+                if (customLabels) {
+                    const labels = customLabels.split(',').map(l => l.trim()).filter(l => l);
+                    if (labels.length > 0) {
+                        headers['x-amz-meta-customLabels'] = labels.join(',');
+                    }
+                }
+
+                const response = await fetch(`${API_GATEWAY_URL}/upload/${encodeURIComponent(file.name)}`, {
+                    method: 'PUT',
+                    headers: headers,
+                    body: arrayBuffer
+                });
+
+                if (response.ok) {
+                    showMessage('Photo uploaded successfully!', 'success');
+                    fileInput.value = '';
+                    customLabelsInput.value = '';
+                } else {
+                    const errorText = await response.text();
+                    showMessage(`Upload failed: ${errorText || response.statusText}`, 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showMessage(`Upload failed: ${error.message}`, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload';
+            }
+        }
+
+        // Allow Enter key for search
+        document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchPhotos();
+            }
+        });
+    </script>
+</body>
+</html>
