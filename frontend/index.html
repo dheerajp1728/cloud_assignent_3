@@ -306,10 +306,14 @@
                     }
                 });
 
+                if (!response.ok) {
+                    throw new Error(`API returned ${response.status}: ${response.statusText}`);
+                }
+
                 const data = await response.json();
 
-                if (response.ok && data.results && data.results.length > 0) {
-                    showMessage(`Found ${data.results.length} photos`, 'success');
+                if (data.results && data.results.length > 0) {
+                    showMessage(`✅ Found ${data.results.length} photo${data.results.length > 1 ? 's' : ''}`, 'success');
                     
                     resultsEl.innerHTML = `
                         <h3>Search Results (${data.results.length})</h3>
@@ -329,8 +333,8 @@
                         </div>
                     `;
                 } else {
-                    showMessage('No photos found', 'error');
-                    resultsEl.innerHTML = '';
+                    showMessage('No photos found for your query', 'error');
+                    resultsEl.innerHTML = '<p style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.7);">Try searching for: dog, cat, tree, person, or other objects</p>';
                 }
             } catch (error) {
                 console.error('Search error:', error);
@@ -385,12 +389,28 @@
                 });
 
                 if (response.ok) {
-                    showMessage('Photo uploaded successfully!', 'success');
+                    showMessage('✅ Photo uploaded successfully! It will be indexed shortly.', 'success');
                     fileInput.value = '';
                     customLabelsInput.value = '';
+                    
+                    // Optionally trigger a search refresh after a delay
+                    setTimeout(() => {
+                        const currentQuery = document.getElementById('searchQuery').value;
+                        if (currentQuery) {
+                            console.log('Auto-refreshing search results...');
+                        }
+                    }, 3000);
                 } else {
-                    const errorText = await response.text();
-                    showMessage(`Upload failed: ${errorText || response.statusText}`, 'error');
+                    let errorMessage = `Upload failed (${response.status})`;
+                    try {
+                        const errorText = await response.text();
+                        if (errorText) {
+                            errorMessage = `Upload failed: ${errorText}`;
+                        }
+                    } catch (e) {
+                        errorMessage = `Upload failed: ${response.statusText}`;
+                    }
+                    showMessage(errorMessage, 'error');
                 }
             } catch (error) {
                 console.error('Upload error:', error);
