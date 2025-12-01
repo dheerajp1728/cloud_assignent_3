@@ -314,12 +314,18 @@
                     resultsEl.innerHTML = `
                         <h3>Search Results (${data.results.length})</h3>
                         <div class="image-grid">
-                            ${data.results.map((url, index) => `
-                                <div class="image-card">
-                                    <img src="${url}" alt="Result ${index + 1}" />
-                                    <p>${url.split('/').pop()}</p>
-                                </div>
-                            `).join('')}
+                            ${data.results.map((result, index) => {
+                                const imageUrl = typeof result === 'string' ? result : result.url;
+                                const labels = result.labels || [];
+                                const filename = imageUrl.split('/').pop();
+                                return `
+                                    <div class="image-card">
+                                        <img src="${imageUrl}" alt="Result ${index + 1}" />
+                                        <p><strong>${filename}</strong></p>
+                                        ${labels.length > 0 ? `<p class="labels">Labels: ${labels.slice(0, 5).join(', ')}</p>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     `;
                 } else {
