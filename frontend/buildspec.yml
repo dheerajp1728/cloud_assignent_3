@@ -2,24 +2,20 @@ version: 0.2
 
 phases:
   install:
+    runtime-versions:
+      nodejs: 18
     commands:
       - echo "Installing dependencies..."
       - cd frontend
+      - npm install
       
   build:
     commands:
-      - echo "Preparing frontend files for deployment..."
+      - echo "Building React application..."
       - echo "Current directory:" && pwd
-      - echo "Files to deploy:" && ls -la
-      - echo "Validating HTML..."
-      - |
-        if [ -f "index.html" ]; then
-          echo "✓ index.html found"
-        else
-          echo "✗ index.html not found"
-          exit 1
-        fi
+      - npm run build
       - echo "Build completed on $(date)"
+      - echo "Build folder contents:" && ls -la build/
       
   post_build:
     commands:
@@ -29,8 +25,8 @@ phases:
           FRONTEND_BUCKET="ai-photo-search-frontend-${AWS_ACCOUNT_ID}"
         fi
       - echo "Target bucket: $FRONTEND_BUCKET"
-      - echo "Syncing files to S3..."
-      - aws s3 sync . s3://${FRONTEND_BUCKET}/ --delete --exclude "buildspec.yml" --exclude ".git/*" --region $AWS_DEFAULT_REGION
+      - echo "Syncing build files to S3..."
+      - aws s3 sync build/ s3://${FRONTEND_BUCKET}/ --delete --region $AWS_DEFAULT_REGION
       - echo "Setting content types..."
       - aws s3 cp s3://${FRONTEND_BUCKET}/index.html s3://${FRONTEND_BUCKET}/index.html --content-type "text/html" --metadata-directive REPLACE --region $AWS_DEFAULT_REGION
       - echo "Deployment completed successfully"
@@ -38,7 +34,5 @@ phases:
 
 artifacts:
   files:
-    - frontend/**/*
-  exclude-paths:
-    - frontend/buildspec.yml
+    - frontend/build/**/*
   name: FrontendArtifact
