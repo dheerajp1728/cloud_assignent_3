@@ -32,3 +32,10 @@ frontend/index-final.html
 
 # Test Files and Directories
 tests/
+
+# Node.js
+node_modules/
+package-lock.json
+
+# React Build
+frontend/build/
