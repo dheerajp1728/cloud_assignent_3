@@ -39,3 +39,8 @@ package-lock.json
 
 # React Build
 frontend/build/
+
+# Lambda Deployment Packages
+lambda/package/
+lambda/*.zip
+*.zip
