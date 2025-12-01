@@ -39,17 +39,24 @@ function UploadSection({ showMessage }) {
 
       const headers = {
         'x-api-key': API_KEY,
-        'Content-Type': selectedFile.type
+        'Content-Type': selectedFile.type || 'image/jpeg'
       };
 
       if (labels.length > 0) {
         headers['x-amz-meta-customLabels'] = labels.join(',');
       }
 
+      // Read file as ArrayBuffer to preserve binary data
+      const fileBuffer = await selectedFile.arrayBuffer();
+
       const response = await axios.put(
-        `${API_GATEWAY_URL}/upload/${selectedFile.name}`,
-        selectedFile,
-        { headers }
+        `${API_GATEWAY_URL}/upload/${encodeURIComponent(selectedFile.name)}`,
+        fileBuffer,
+        { 
+          headers,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
+        }
       );
 
       if (response.status === 200) {
