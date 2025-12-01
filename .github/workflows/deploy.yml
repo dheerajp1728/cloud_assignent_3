@@ -42,7 +42,8 @@ jobs:
       - name: Install Lambda dependencies (index-photos)
         run: |
           cd lambda/index-photos
-          pip install -r requirements.txt -t ./package
+          mkdir -p package
+          pip install boto3 opensearch-py requests-aws4auth -t ./package
           cp lambda_function.py package/
           cd package
           zip -r ../index-photos.zip .
@@ -57,7 +58,8 @@ jobs:
       - name: Install Lambda dependencies (search-photos)
         run: |
           cd lambda/search-photos
-          pip install -r requirements.txt -t ./package
+          mkdir -p package
+          pip install boto3 opensearch-py requests-aws4auth -t ./package
           cp lambda_function.py package/
           cd package
           zip -r ../search-photos.zip .
