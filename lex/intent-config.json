@@ -1,0 +1,45 @@
+{
+  "intentName": "SearchIntent",
+  "description": "Intent to search for photos using keywords",
+  "sampleUtterances": [
+    {
+      "utterance": "show me {Keywords}"
+    },
+    {
+      "utterance": "find photos of {Keywords}"
+    },
+    {
+      "utterance": "search for {Keywords}"
+    },
+    {
+      "utterance": "show me photos with {Keywords}"
+    },
+    {
+      "utterance": "{Keywords}"
+    },
+    {
+      "utterance": "find {Keywords}"
+    },
+    {
+      "utterance": "search {Keywords}"
+    },
+    {
+      "utterance": "show {Keywords}"
+    },
+    {
+      "utterance": "photos of {Keywords}"
+    },
+    {
+      "utterance": "pictures of {Keywords}"
+    }
+  ],
+  "slotPriorities": [
+    {
+      "priority": 1,
+      "slotName": "Keywords"
+    }
+  ],
+  "intentConfirmationSetting": {
+    "active": false
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "slotConstraint": "Required",
+  "promptSpecification": {
+    "messageGroups": [
+      {
+        "message": {
+          "plainTextMessage": {
+            "value": "What would you like to search for?"
+          }
+        }
+      }
+    ],
+    "maxRetries": 2
+  }
+}

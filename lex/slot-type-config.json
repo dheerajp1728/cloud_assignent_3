@@ -1,0 +1,91 @@
+{
+  "slotTypeName": "PhotoKeywords",
+  "description": "Custom slot type for photo search keywords",
+  "slotTypeValues": [
+    {
+      "sampleValue": {
+        "value": "dogs"
+      },
+      "synonyms": [
+        {
+          "value": "dog"
+        },
+        {
+          "value": "puppy"
+        },
+        {
+          "value": "puppies"
+        }
+      ]
+    },
+    {
+      "sampleValue": {
+        "value": "cats"
+      },
+      "synonyms": [
+        {
+          "value": "cat"
+        },
+        {
+          "value": "kitten"
+        },
+        {
+          "value": "kittens"
+        }
+      ]
+    },
+    {
+      "sampleValue": {
+        "value": "trees"
+      },
+      "synonyms": [
+        {
+          "value": "tree"
+        },
+        {
+          "value": "forest"
+        },
+        {
+          "value": "woods"
+        }
+      ]
+    },
+    {
+      "sampleValue": {
+        "value": "kids"
+      },
+      "synonyms": [
+        {
+          "value": "children"
+        },
+        {
+          "value": "child"
+        },
+        {
+          "value": "kid"
+        }
+      ]
+    },
+    {
+      "sampleValue": {
+        "value": "beach"
+      }
+    },
+    {
+      "sampleValue": {
+        "value": "mountains"
+      }
+    },
+    {
+      "sampleValue": {
+        "value": "sunset"
+      }
+    },
+    {
+      "sampleValue": {
+        "value": "flowers"
+      }
+    }
+  ],
+  "valueSelectionStrategy": "ORIGINAL_VALUE"
+}

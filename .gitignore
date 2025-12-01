@@ -1,0 +1,34 @@
+# PowerShell Scripts
+*.ps1
+
+# Markdown Documentation (except README.md files)
+*.md
+!README.md
+!**/README.md
+
+# Keep specific README files in subdirectories
+!lex/README.md
+!api/sdk/apiGateway-js-sdk/README.md
+!frontend/sdk/README.md
+
+# Explicitly ignore specific documentation files
+GITHUB_ACTIONS_SETUP.md
+
+# Legacy and Backup Files
+*-legacy.*
+*legacy.*
+*.backup
+*.bak
+*-old.*
+*old.*
+
+# Legacy CloudFormation Templates
+cloudformation/stack-legacy.yaml
+cloudformation/complete-stack.yaml.backup
+
+# Legacy Frontend Files
+frontend/index-configured.html
+frontend/index-final.html
+
+# Test Files and Directories
+tests/

@@ -1,0 +1,12 @@
+[
+  {"utterance": "show me {Keywords}"},
+  {"utterance": "find photos of {Keywords}"},
+  {"utterance": "search for {Keywords}"},
+  {"utterance": "show me photos with {Keywords}"},
+  {"utterance": "{Keywords}"},
+  {"utterance": "find {Keywords}"},
+  {"utterance": "search {Keywords}"},
+  {"utterance": "photos of {Keywords}"},
+  {"utterance": "pictures of {Keywords}"},
+  {"utterance": "show {Keywords}"}
+]

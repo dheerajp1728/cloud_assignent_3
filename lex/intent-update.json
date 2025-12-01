@@ -1,0 +1,16 @@
+{
+  "intentName": "SearchIntent",
+  "description": "Intent for searching photos",
+  "sampleUtterances": [
+    {"utterance": "show me {keyword}"},
+    {"utterance": "find {keyword}"},
+    {"utterance": "search for {keyword}"},
+    {"utterance": "{keyword}"},
+    {"utterance": "show me photos with {keyword}"}
+  ],
+  "slotPriorities": [
+    {"priority": 1, "slotId": "KRZ3FLUXUG"}
+  ],
+  "intentConfirmationSetting": null,
+  "intentClosingSetting": null
+}

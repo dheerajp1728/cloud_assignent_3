@@ -1,0 +1,12 @@
+{
+  "botName": "PhotoSearchBot",
+  "description": "Bot for searching photos using natural language queries",
+  "roleArn": "arn:aws:iam::381437599887:role/aws-service-role/lexv2.amazonaws.com/AWSServiceRoleForLexV2Bots_SUFFIX",
+  "dataPrivacy": {
+    "childDirected": false
+  },
+  "idleSessionTTLInSeconds": 300,
+  "botTags": {
+    "Project": "AI-Photo-Search"
+  }
+}
