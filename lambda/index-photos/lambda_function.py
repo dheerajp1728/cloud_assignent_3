@@ -97,8 +97,8 @@ def lambda_handler(event, context):
             labels_res = detect_labels(image_name, bucket)
             print(f"Labels result ==> {labels_res}")
             
-            # Create timestamp
-            created_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            # Create timestamp in ISO 8601 format for OpenSearch
+            created_timestamp = datetime.now().isoformat()
             
             # Create the document to index
             query = {
