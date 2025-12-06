@@ -64,10 +64,24 @@ function SearchSection({ showMessage }) {
         <div className="results">
           <h3>Search Results ({results.length})</h3>
           <div className="image-grid">
-            {results.map((url, index) => (
+            {results.map((result, index) => (
               <div key={index} className="image-card">
-                <img src={url} alt={`Result ${index + 1}`} />
-                <p>{url.split('/').pop()}</p>
+                <img src={result.url} alt={`Result ${index + 1}`} />
+                <div className="image-info">
+                  <p className="image-filename">{result.url.split('/').pop()}</p>
+                  {result.labels && result.labels.length > 0 && (
+                    <div className="image-labels">
+                      <strong>Labels:</strong>
+                      <div className="labels-container">
+                        {result.labels.map((label, labelIndex) => (
+                          <span key={labelIndex} className="label-tag">
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

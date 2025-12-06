@@ -86,7 +86,6 @@ Resources:
   IndexPhotosLambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub '${ProjectName}-index-photos-role'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -119,7 +118,6 @@ Resources:
   SearchPhotosLambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub '${ProjectName}-search-photos-role'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -134,7 +132,6 @@ Resources:
   APIGatewayS3Role:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub '${ProjectName}-api-s3-role'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -158,19 +155,6 @@ Resources:
   # ============================================================================
 
   # Lambda Layer for Python dependencies (opensearchpy, requests-aws4auth)
-  PythonDependenciesLayer:
-    Type: AWS::Lambda::LayerVersion
-    Properties:
-      LayerName: !Sub '${ProjectName}-python-dependencies'
-      Description: 'Python dependencies: opensearchpy, requests-aws4auth'
-      Content:
-        S3Bucket: !Sub 'cloudformation-templates-${AWS::Region}'
-        S3Key: 'layers/python-dependencies.zip'
-      CompatibleRuntimes:
-        - python3.11
-        - python3.10
-        - python3.9
-
   # Lambda function for indexing photos
   IndexPhotosLambda:
     Type: AWS::Lambda::Function
@@ -612,11 +596,6 @@ Resources:
     Properties:
       RestApiId: !Ref PhotoSearchAPI
       StageName: prod
-      StageDescription:
-        Description: 'Production stage for Photo Search API'
-        LoggingLevel: INFO
-        DataTraceEnabled: true
-        MetricsEnabled: true
 
 # ============================================================================
 # OUTPUTS
