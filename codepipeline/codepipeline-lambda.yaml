@@ -132,9 +132,9 @@ Resources:
       Artifacts:
         Type: CODEPIPELINE
       Environment:
-        Type: LINUX_CONTAINER
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/standard:7.0
+        Type: ARM_LAMBDA_CONTAINER
+        ComputeType: BUILD_LAMBDA_10GB
+        Image: aws/codebuild/amazonlinux-aarch64-lambda-standard:python3.12
         EnvironmentVariables:
           - Name: FUNCTION_NAME
             Value: !Sub '${ProjectName}-index-photos'
@@ -157,9 +157,9 @@ Resources:
       Artifacts:
         Type: CODEPIPELINE
       Environment:
-        Type: LINUX_CONTAINER
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/standard:7.0
+        Type: ARM_LAMBDA_CONTAINER
+        ComputeType: BUILD_LAMBDA_10GB
+        Image: aws/codebuild/amazonlinux-aarch64-lambda-standard:python3.12
         EnvironmentVariables:
           - Name: FUNCTION_NAME
             Value: !Sub '${ProjectName}-search-photos'
